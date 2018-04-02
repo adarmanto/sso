@@ -1,5 +1,5 @@
 <?php
-namespace Jasny\SSO;
+namespace Adarmanto\SSO;
 
 /**
  * SSO Exception

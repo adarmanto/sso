@@ -1,8 +1,5 @@
 <?php
-namespace Jasny\SSO;
-
-use Desarrolla2\Cache\Cache;
-use Desarrolla2\Cache\Adapter;
+namespace Adarmanto\SSO;
 
 /**
  * Single sign-on server.
@@ -17,14 +14,7 @@ abstract class Server
     /**
      * @var array
      */
-    protected $options = ['files_cache_directory' => '/tmp', 'files_cache_ttl' => 36000];
-
-    /**
-     * Cache that stores the special session data for the brokers.
-     *
-     * @var Cache
-     */
-    protected $cache;
+    protected $options = [];
 
     /**
      * @var string
@@ -45,20 +35,6 @@ abstract class Server
     public function __construct(array $options = [])
     {
         $this->options = $options + $this->options;
-        $this->cache = $this->createCacheAdapter();
-    }
-
-    /**
-     * Create a cache to store the broker session id.
-     *
-     * @return Cache
-     */
-    protected function createCacheAdapter()
-    {
-        $adapter = new Adapter\File($this->options['files_cache_directory']);
-        $adapter->setOption('ttl', $this->options['files_cache_ttl']);
-
-        return new Cache($adapter);
     }
 
     /**
@@ -74,19 +50,19 @@ abstract class Server
             return $this->fail("Broker didn't send a session key", 400);
         }
 
-        $linkedId = $this->cache->get($sid);
+        $linkedId = $this->getCacheData($sid);
 
         if (!$linkedId) {
             return $this->fail("The broker session id isn't attached to a user session", 403);
         }
 
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            if ($linkedId !== session_id()) throw new \Exception("Session has already started", 400);
+        if ($this->isSessionStarted()) {
+            if ($linkedId !== $this->sessionId()) throw new \Exception("Session has already started", 400);
             return;
         }
 
-        session_id($linkedId);
-        session_start();
+        $this->sessionId($linkedId);
+        $this->sessionStart();
 
         $this->brokerId = $this->validateBrokerSessionId($sid);
     }
@@ -144,7 +120,7 @@ abstract class Server
      */
     protected function startUserSession()
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        if (!$this->isSessionStarted()) $this->sessionStart();
     }
 
     /**
@@ -218,7 +194,7 @@ abstract class Server
         $this->startUserSession();
         $sid = $this->generateSessionId($_REQUEST['broker'], $_REQUEST['token']);
 
-        $this->cache->set($sid, $this->getSessionData('id'));
+        $this->setCacheData($sid, $this->sessionId());
         $this->outputAttachSuccess();
     }
 
@@ -311,36 +287,6 @@ abstract class Server
         echo json_encode($user);
     }
 
-
-    /**
-     * Set session data
-     *
-     * @param string $key
-     * @param string $value
-     */
-    protected function setSessionData($key, $value)
-    {
-        if (!isset($value)) {
-            unset($_SESSION[$key]);
-            return;
-        }
-
-        $_SESSION[$key] = $value;
-    }
-
-    /**
-     * Get session data
-     *
-     * @param type $key
-     */
-    protected function getSessionData($key)
-    {
-        if ($key === 'id') return session_id();
-
-        return isset($_SESSION[$key]) ? $_SESSION[$key] : null;
-    }
-
-
     /**
      * An error occured.
      *
@@ -374,6 +320,53 @@ abstract class Server
         exit();
     }
 
+    /**
+     * Set cache data
+     *
+     * @param string $key
+     * @param string $value
+     */
+    abstract protected function setCacheData($key, $value);
+
+    /**
+     * Get cache data
+     *
+     * @param type $key
+     */
+    abstract protected function getCacheData($key);
+
+    /**
+     * Check the session status
+     * @return boolean 
+     */
+    abstract protected function isSessionStarted();
+
+    /**
+     * Start session
+     */
+    abstract protected function sessionStart();
+
+    /**
+     * Get/set session id
+     * @param  string $id 
+     * @return string
+     */
+    abstract protected function sessionId($id = null);
+
+    /**
+     * Set session data
+     *
+     * @param string $key
+     * @param string $value
+     */
+    abstract protected function setSessionData($key, $value);
+
+    /**
+     * Get session data
+     *
+     * @param type $key
+     */
+    abstract protected function getSessionData($key);
 
     /**
      * Authenticate using user credentials
