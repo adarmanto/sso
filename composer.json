@@ -1,5 +1,5 @@
 {
-    "name": "jasny/sso",
+    "name": "adarmanto/sso",
     "description": "Simple Single Sign-On",
     "keywords": ["sso", "auth"],
     "license": "MIT",
@@ -9,6 +9,11 @@
             "name": "Arnold Daniels",
             "email": "arnold@jasny.net",
             "homepage": "http://www.jasny.net"
+        },
+        {
+            "name": "Agung Darmanto",
+            "email": "agung.darmantoo@gmail.com",
+            "homepage": "https://www.linkedin.com/in/agungdarmanto/"
         }
     ],
     "support": {
@@ -25,7 +30,7 @@
     },
     "autoload": {
         "psr-4": {
-            "Jasny\\SSO\\": "src/"
+            "Adarmanto\\SSO\\": "src/"
         }
     }
 }
