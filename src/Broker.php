@@ -198,7 +198,8 @@ class Broker
         }
 
         $data['access_token'] = $this->getSessionID();
-
+        $data['referer_url'] = (!empty($_SERVER['HTTPS']) ? 'https://' : 'http://') . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $data['referer_ip'] = isset($_SERVER['SERVER_ADDR']) ? $_SERVER['SERVER_ADDR'] : $_SERVER['REMOTE_ADDR'];
         $url = $this->getRequestUrl($command, !$data || $method === 'POST' ? [] : $data);
 
         $ch = curl_init($url);

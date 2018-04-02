@@ -42,6 +42,17 @@ abstract class Server
      */
     public function startBrokerSession()
     {
+        // Validate the allowed IPs
+        if (isset($this->options['allowed_ips']) && is_array($this->options['allowed_ips']) && count($this->options['allowed_ips']) > 0) {
+            if (isset($_REQUEST['referer_ip'])) {
+                if (!in_array($_REQUEST['referer_ip'], $this->options['allowed_ips'])) {
+                    return $this->fail('Restricted IP', 400);
+                }
+            } else {
+               return $this->fail('Missing referer IP', 400);
+            }
+        }
+
         if (isset($this->brokerId)) return;
 
         $sid = $this->getBrokerSessionID();
@@ -67,29 +78,30 @@ abstract class Server
         $this->brokerId = $this->validateBrokerSessionId($sid);
     }
 
-            /**
-         * Get session ID from header Authorization or from $_GET/$_POST
-         */
-        protected function getBrokerSessionID()
-        {
+    /**
+     * Get session ID from header Authorization or from $_GET/$_POST
+     */
+    protected function getBrokerSessionID()
+    {
+        if (function_exists('getallheaders')) {
             $headers = getallheaders();
 
             if (isset($headers['Authorization']) &&  strpos($headers['Authorization'], 'Bearer') === 0) {
                 $headers['Authorization'] = substr($headers['Authorization'], 7);
                 return $headers['Authorization'];
             }
-            if (isset($_GET['access_token'])) {
-                return $_GET['access_token'];
-            }
-            if (isset($_POST['access_token'])) {
-                return $_POST['access_token'];
-            }
-            if (isset($_GET['sso_session'])) {
-                return $_GET['sso_session'];
-            }
-
-            return false;
         }
+
+        if (isset($_GET['access_token'])) {
+            return $_GET['access_token'];
+        }
+
+        if (isset($_POST['access_token'])) {
+            return $_POST['access_token'];
+        }
+
+        return false;
+    }
 
     /**
      * Validate the broker session id
@@ -196,6 +208,7 @@ abstract class Server
 
         $this->setCacheData($sid, $this->sessionId());
         $this->outputAttachSuccess();
+        exit();
     }
 
     /**
@@ -266,6 +279,7 @@ abstract class Server
 
         header('Content-type: application/json; charset=UTF-8');
         http_response_code(204);
+        exit();
     }
 
     /**
@@ -285,6 +299,7 @@ abstract class Server
 
         header('Content-type: application/json; charset=UTF-8');
         echo json_encode($user);
+        exit();
     }
 
     /**
@@ -393,4 +408,3 @@ abstract class Server
      */
     abstract protected function getUserInfo($username);
 }
-
